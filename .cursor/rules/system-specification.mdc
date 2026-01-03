@@ -1,0 +1,126 @@
+---
+alwaysApply: true
+---
+
+# Identity Service - Especificação do Sistema
+
+## Visão Geral
+
+Este serviço fornece **autenticação e identidade centralizada** para múltiplas aplicações e microsserviços.
+
+### Principais Objetivos
+
+- Usuário **global e único**
+- Suporte a **email/senha** e **OAuth (Google)**
+- Tokens **específicos por aplicação**
+- Isolamento de permissões e contexto entre aplicações
+
+---
+
+## Conceito Fundamental
+
+> **Identidade é global, acesso é contextual por aplicação**
+
+Um mesmo usuário pode existir em várias aplicações, mas **cada aplicação tem seu próprio contexto de informação**.
+
+---
+
+## Entidades Principais
+
+### 1. User (Identidade Global)
+
+Representa a identidade única da pessoa no sistema.
+
+**Características:**
+
+- Identidade única e global no sistema
+- Pode estar associado a múltiplas aplicações
+- Suporta autenticação via email/senha e OAuth (Google)
+
+### 2. Application (Cliente do Auth Service)
+
+Representa **quem consome o serviço de autenticação**.
+
+Uma Application não é apenas um "app visual", mas qualquer serviço que:
+
+- solicita autenticação
+- recebe tokens
+- valida usuários
+
+**Características:**
+
+- Identificada por um `clientId` único
+- Recebe tokens JWT específicos para ela
+- Tem seu próprio contexto de informações do usuário
+
+---
+
+## Fluxo de Autenticação
+
+### Login (Email/Senha ou OAuth)
+
+1. A aplicação chama o Auth Service informando seu `clientId` pelo header `x-client-id`
+2. O Auth Service:
+   - identifica a Application
+   - autentica o usuário
+3. Um **JWT é emitido com contexto da Application**
+
+---
+
+## JWT – Como os Tokens são Diferenciados
+
+> **Tokens não são globais.**
+>
+> Eles sempre pertencem a **uma Application específica**.
+
+### Claim Essencial: `aud` (audience)
+
+O campo `aud` indica **para qual aplicação o token foi emitido**.
+
+**Exemplo conceitual:**
+
+- Token do Game → `aud = game-api`
+- Token do Dashboard → `aud = dashboard-web`
+
+Mesmo usuário → **tokens diferentes**.
+
+### Validação nos Microsserviços
+
+Cada microsserviço deve:
+
+- validar a assinatura do token
+- validar `iss` (emissor)
+- validar **`aud` igual ao seu `applicationId`**
+
+Se o token não for destinado àquele serviço → **acesso negado automaticamente**.
+
+**Isso impede:**
+
+- reutilização de token entre serviços
+- vazamento de permissões
+
+---
+
+## Refresh Tokens
+
+### Características
+
+- **Access Tokens (JWT)** devem ser **curtos**
+- **Refresh Tokens** são:
+  - armazenados no servidor
+  - vinculados a `(user + application)`
+  - usados para emitir novos JWTs
+
+**Isso mantém:**
+
+- segurança
+- controle de sessão por aplicação
+
+---
+
+## Regras de Negócio Importantes
+
+1. **Isolamento por Application**: Cada Application tem seu próprio contexto de informações do usuário
+2. **Tokens Específicos**: Tokens JWT sempre incluem `aud` com o `applicationId` da Application que solicitou
+3. **Validação Obrigatória**: Microsserviços devem validar que o `aud` do token corresponde ao seu próprio `applicationId`
+4. **Refresh Token por Contexto**: Refresh Tokens são vinculados à combinação `(user + application)`, não apenas ao usuário

@@ -1,0 +1,131 @@
+---
+alwaysApply: true
+---
+
+# Clean Architecture - Backend Architecture Rules
+
+## Estrutura de Diretórios
+
+A aplicação deve seguir a Clean Architecture com a seguinte estrutura:
+
+```
+src/
+├── domain/                # Regras de negócio puras
+│   ├── entities/          # Entidades e Value Objects
+│   └── repositories/      # Interfaces (contratos)
+│
+├── application/           # Casos de uso + pontos de entrada
+│   ├── users/
+│   │   ├── create-user/
+│   │   │   ├── create-user.usecase.ts
+│   │   │   ├── create-user.controller.ts
+│   │   │   ├── create-user.dto.ts
+│   │   │
+│   │   ├── list-users/
+│   │   │   ├── list-users.usecase.ts
+│   │   │   ├── list-users.controller.ts
+│   │   │   └── list-users.dto.ts
+│   │
+│   ├── controller.ts      # exportação de todas as controllers
+│   ├── usecases.ts        # exportação de todos os usecases
+│   └── usecase.module.ts  # módulo central com tudo que precisa pro usecase funcionar/exportar
+│
+├── infrastructure/        # Implementações técnicas, tipo conexão com banco de dados
+│   └── repositories/
+│       └── user.repository.ts  # implementação do repositório, onde o contrato está em domain, com os métodos CRUD, por exemplo, conectando com o ORM
+│
+└── main.ts                # Bootstrap do NestJS
+```
+
+## Regras de Comportamento do Agente
+
+### 1. Separação de Responsabilidades
+
+- **Domain Layer**: Contém apenas lógica de negócio pura, sem dependências externas
+  - Entidades devem ser classes simples com propriedades e métodos de negócio
+  - Repositórios são apenas interfaces/contratos, sem implementação
+  - NUNCA importar dependências de infrastructure ou application no domain
+
+- **Application Layer**: Orquestra os casos de uso
+  - UseCases contêm a lógica de aplicação e coordenam chamadas aos repositórios
+  - Controllers são pontos de entrada HTTP que chamam os UseCases
+  - DTOs são usados para validação e transferência de dados
+  - Cada feature deve ter sua própria pasta com seus arquivos específicos
+
+- **Infrastructure Layer**: Implementações técnicas
+  - Implementa os contratos definidos em domain/repositories
+  - Pode usar ORMs, bibliotecas de banco de dados, APIs externas
+  - NUNCA deve conter lógica de negócio
+
+### 2. Direção das Dependências
+
+- As dependências devem sempre apontar para dentro (em direção ao domain)
+- Domain não depende de nada
+- Application depende apenas de Domain
+- Infrastructure depende de Domain e Application (quando necessário)
+- NUNCA criar dependências circulares
+
+### 3. Organização de Features
+
+- Cada feature deve ter sua própria pasta dentro de `application/`
+- Cada feature deve conter:
+  - `{feature-name}.usecase.ts`: Lógica do caso de uso
+  - `{feature-name}.controller.ts`: Controller HTTP
+  - `{feature-name}.dto.ts`: DTOs de entrada/saída
+- UseCases devem ser injetáveis via NestJS Dependency Injection
+- Controllers devem ser decorados com `@Controller()` do NestJS
+
+### 4. Repositórios
+
+- Interfaces de repositório devem estar em `domain/repositories/`
+- Implementações devem estar em `infrastructure/repositories/`
+- UseCases devem depender apenas das interfaces, não das implementações
+- Use injeção de dependência do NestJS para conectar interfaces às implementações
+
+### 5. Módulos NestJS
+
+- Criar módulos de feature quando necessário
+- O `usecase.module.ts` deve exportar todos os UseCases e suas dependências
+- O `controller.ts` deve exportar todos os Controllers
+- Configurar providers para conectar interfaces de repositório às implementações
+
+### 6. Entidades e Value Objects
+
+- Entidades devem estar em `domain/entities/`
+- Value Objects devem estar em `domain/entities/` ou `domain/value-objects/`
+- Entidades devem ter métodos de negócio quando necessário
+- Evitar anemic domain models
+
+### 7. DTOs e Validação
+
+- DTOs devem estar junto com seus respectivos UseCases
+- Usar **Zod** para validação de DTOs de entrada
+- DTOs de entrada devem usar schemas Zod para validação
+- Tipos TypeScript devem ser inferidos dos schemas Zod usando `z.infer<>`
+- Usar `ZodValidationPipe` do `infrastructure/common/zod-validation.pipe.ts` nos controllers para validar dados
+- DTOs de saída devem estruturar dados retornados (podem ser interfaces TypeScript simples)
+- Schemas Zod devem estar no mesmo arquivo do DTO ou em arquivo separado `{feature-name}.schema.ts`
+
+### 8. Exports Centralizados
+
+- `application/controller.ts`: Exporta todos os controllers
+- `application/usecases.ts`: Exporta todos os usecases
+- Facilita importação e organização
+
+### 9. Boas Práticas
+
+- Sempre seguir os princípios SOLID
+- Manter classes e funções pequenas e focadas
+- Evitar acoplamento entre features
+- Usar injeção de dependência do NestJS
+- Manter testes unitários para UseCases
+- Manter testes de integração para Controllers e Repositórios
+
+### 10. Exemplo de Fluxo
+
+1. Request HTTP chega no Controller
+2. Controller valida DTO e chama UseCase
+3. UseCase executa lógica de negócio e chama Repository (interface)
+4. Repository (implementação) acessa banco de dados
+5. Dados retornam pelo mesmo caminho
+6. Controller retorna resposta HTTP
