@@ -45,8 +45,7 @@ The same user can exist across multiple applications, but each application has i
 
 ```env
 # JWT Access Token - RSA Keys
-JWT_ACCESS_TOKEN_PRIVATE_KEY=-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----
-JWT_ACCESS_TOKEN_PUBLIC_KEY=-----BEGIN RSA PUBLIC KEY-----\n...\n-----END RSA PUBLIC KEY-----
+JWT_ACCESS_TOKEN_PRIVATE_KEY=-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE
 
 # JWT Refresh Token - RSA Keys
 JWT_REFRESH_TOKEN_PRIVATE_KEY=-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----
