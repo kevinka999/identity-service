@@ -5,17 +5,25 @@ import { IAuthService } from '../../domain/services/auth.service.interface';
 
 @Injectable()
 export class AuthService implements IAuthService {
-  private readonly ACCESS_TOKEN_SECRET: string;
-  private readonly REFRESH_TOKEN_SECRET: string;
+  private readonly ACCESS_TOKEN_PRIVATE_KEY: string;
+  private readonly REFRESH_TOKEN_PRIVATE_KEY: string;
 
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {
-    this.ACCESS_TOKEN_SECRET =
-      this.configService.get<string>('ACCESS_TOKEN_SECRET') || '';
-    this.REFRESH_TOKEN_SECRET =
-      this.configService.get<string>('REFRESH_TOKEN_SECRET') || '';
+    this.ACCESS_TOKEN_PRIVATE_KEY =
+      this.configService.get<string>('JWT_ACCESS_TOKEN_PRIVATE_KEY') || '';
+    this.REFRESH_TOKEN_PRIVATE_KEY =
+      this.configService.get<string>('JWT_REFRESH_TOKEN_PRIVATE_KEY') || '';
+
+    if (!this.ACCESS_TOKEN_PRIVATE_KEY) {
+      throw new Error('JWT_ACCESS_TOKEN_PRIVATE_KEY is required');
+    }
+
+    if (!this.REFRESH_TOKEN_PRIVATE_KEY) {
+      throw new Error('JWT_REFRESH_TOKEN_PRIVATE_KEY is required');
+    }
   }
 
   async generateAccessToken(
@@ -30,7 +38,8 @@ export class AuthService implements IAuthService {
     };
 
     return this.jwtService.signAsync(payload, {
-      secret: this.ACCESS_TOKEN_SECRET,
+      privateKey: this.ACCESS_TOKEN_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      algorithm: 'RS256',
       expiresIn: '30m',
     });
   }
@@ -45,12 +54,9 @@ export class AuthService implements IAuthService {
     };
 
     return this.jwtService.signAsync(payload, {
-      secret: this.REFRESH_TOKEN_SECRET,
+      privateKey: this.REFRESH_TOKEN_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      algorithm: 'RS256',
       expiresIn: '3d',
     });
-  }
-
-  async verifyToken(token: string, secret: string): Promise<unknown> {
-    return this.jwtService.verifyAsync(token, { secret });
   }
 }
