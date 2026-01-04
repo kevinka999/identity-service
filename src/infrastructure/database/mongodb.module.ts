@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UserSchemaFactory } from './schemas/user.schema';
 import { ApplicationSchemaFactory } from './schemas/application.schema';
+import { RefreshTokenSchemaFactory } from './schemas/refresh-token.schema';
 import { ConfigService } from '@nestjs/config';
 
 @Module({
@@ -16,6 +17,7 @@ import { ConfigService } from '@nestjs/config';
     MongooseModule.forFeature([
       { name: 'User', schema: UserSchemaFactory },
       { name: 'Application', schema: ApplicationSchemaFactory },
+      { name: 'RefreshToken', schema: RefreshTokenSchemaFactory },
     ]),
   ],
   exports: [MongooseModule],

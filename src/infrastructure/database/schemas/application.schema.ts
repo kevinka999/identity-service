@@ -9,22 +9,21 @@ export type ApplicationDocument = ApplicationSchema &
 
 @Schema({ timestamps: true })
 export class ApplicationSchema {
-  @Prop({ required: true })
+  @Prop({ type: String, required: true })
   name: string;
 
-  @Prop({ required: true, unique: true })
+  @Prop({ type: String, required: true, unique: true })
   clientId: string;
 
-  @Prop({ required: true })
+  @Prop({ type: String, required: true })
   clientSecret: string;
 
   @Prop({ type: [String], default: [] })
   scopes: string[];
 
-  @Prop({ default: true })
+  @Prop({ type: Boolean, default: true })
   isActive: boolean;
 }
 
 export const ApplicationSchemaFactory =
   SchemaFactory.createForClass(ApplicationSchema);
-

@@ -5,7 +5,7 @@ import {
   Application,
   ApplicationPayload,
 } from '../../domain/entities/application.entity';
-import { ApplicationRepository as IApplicationRepository } from '../../domain/repositories/application.repository.interface';
+import { IApplicationRepository } from '../../domain/repositories/application.repository.interface';
 import { BaseRepositoryImpl } from './base.repository.impl';
 import { ApplicationDocument } from '../database/schemas/application.schema';
 
@@ -36,5 +36,13 @@ export class ApplicationRepository
       createdAt: document.createdAt,
       updatedAt: document.updatedAt,
     });
+  }
+
+  async findByClientId(clientId: string): Promise<Application | null> {
+    const document = await this.model.findOne({ clientId }).exec();
+    if (!document) {
+      return null;
+    }
+    return this.toEntity(document);
   }
 }

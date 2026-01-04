@@ -9,10 +9,10 @@ export type UserDocument = UserSchema &
 
 @Schema({ timestamps: true })
 export class UserSchema {
-  @Prop({ required: true, unique: true, lowercase: true })
+  @Prop({ type: String, required: true, unique: true, lowercase: true })
   email: string;
 
-  @Prop({ default: false })
+  @Prop({ type: Boolean, default: false })
   emailVerified: boolean;
 
   @Prop({

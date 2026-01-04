@@ -18,7 +18,7 @@ export interface UserApplication {
 }
 
 export interface UserPayload {
-  _id: string;
+  _id?: string;
   email: string;
   emailVerified: boolean;
   authProviders: AuthProvider[];
@@ -37,7 +37,7 @@ export class User {
   public updatedAt: Date;
 
   constructor(payload: UserPayload) {
-    this._id = payload._id;
+    this._id = payload._id || '';
     this.email = payload.email;
     this.emailVerified = payload.emailVerified;
     this.authProviders = payload.authProviders;
