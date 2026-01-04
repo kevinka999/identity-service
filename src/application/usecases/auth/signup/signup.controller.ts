@@ -1,4 +1,5 @@
 import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { ApiSecurity } from '@nestjs/swagger';
 import { SignupUsecase } from './signup.usecase';
 import { SignupDto } from './signup.dto';
 import { ApplicationGuard } from '../../../../infrastructure/guards/application.guard';
@@ -11,6 +12,8 @@ export class SignupController {
 
   @Post('signup')
   @UseGuards(ApplicationGuard)
+  @ApiSecurity('x-client-id')
+  @ApiSecurity('x-client-secret')
   async signup(
     @Body() dto: SignupDto,
     @ApplicationFromRequest() application: Application,

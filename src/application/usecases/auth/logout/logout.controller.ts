@@ -1,4 +1,5 @@
 import { Controller, Post, UseGuards } from '@nestjs/common';
+import { ApiSecurity } from '@nestjs/swagger';
 import { LogoutUsecase } from './logout.usecase';
 import { JwtGuard } from '../../../../infrastructure/guards/jwt.guard';
 import { ApplicationGuard } from '../../../../infrastructure/guards/application.guard';
@@ -13,6 +14,8 @@ export class LogoutController {
 
   @Post('logout')
   @UseGuards(JwtGuard, ApplicationGuard)
+  @ApiSecurity('x-client-id')
+  @ApiSecurity('x-client-secret')
   async logout(
     @User() user: JwtPayload,
     @ApplicationFromRequest() application: Application,

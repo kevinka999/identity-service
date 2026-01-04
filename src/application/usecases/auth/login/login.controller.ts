@@ -1,5 +1,6 @@
 import { Controller, Post, Body, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
+import { ApiSecurity } from '@nestjs/swagger';
 import { LoginUsecase } from './login.usecase';
 import { LoginDto, LoginGoogleDto } from './login.dto';
 import { ApplicationGuard } from '../../../../infrastructure/guards/application.guard';
@@ -14,6 +15,8 @@ export class LoginController {
 
   @Post('login')
   @UseGuards(ApplicationGuard)
+  @ApiSecurity('x-client-id')
+  @ApiSecurity('x-client-secret')
   async login(
     @Body() dto: LoginDto,
     @ApplicationFromRequest() application: Application,
@@ -35,6 +38,8 @@ export class LoginController {
 
   @Post('login/google')
   @UseGuards(ApplicationGuard)
+  @ApiSecurity('x-client-id')
+  @ApiSecurity('x-client-secret')
   async loginGoogle(
     @Body() dto: LoginGoogleDto,
     @ApplicationFromRequest() application: Application,

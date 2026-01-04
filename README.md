@@ -1,55 +1,55 @@
 # Identity Service
 
-Serviço de autenticação e identidade centralizada para múltiplas aplicações e microsserviços.
+Centralized authentication and identity service for multiple applications and microservices.
 
-## 📋 Visão Geral
+## 📋 Overview
 
-O **Identity Service** fornece autenticação e gerenciamento de identidade centralizado, permitindo que múltiplas aplicações compartilhem o mesmo sistema de usuários enquanto mantêm isolamento de contexto e permissões por aplicação.
+The **Identity Service** provides centralized authentication and identity management, allowing multiple applications to share the same user system while maintaining context isolation and permissions per application.
 
-### Conceito Fundamental
+### Core Concept
 
-> **Identidade é global, acesso é contextual por aplicação**
+> **Identity is global, access is contextual per application**
 
-Um mesmo usuário pode existir em várias aplicações, mas cada aplicação tem seu próprio contexto de informação e tokens específicos.
+The same user can exist across multiple applications, but each application has its own context of information and specific tokens.
 
-### Principais Características
+### Key Features
 
-- ✅ Usuário **global e único** no sistema
-- ✅ Suporte a autenticação via **email/senha** e **OAuth (Google)**
-- ✅ Tokens **específicos por aplicação** (JWT com `aud` claim)
-- ✅ Isolamento de permissões e contexto entre aplicações
-- ✅ Refresh tokens vinculados a `(user + application)`
-- ✅ Controle de sessão por aplicação
+- ✅ **Global and unique** user in the system
+- ✅ Support for authentication via **email/password** and **OAuth (Google)**
+- ✅ **Application-specific** tokens (JWT with `aud` claim)
+- ✅ Isolation of permissions and context between applications
+- ✅ Refresh tokens linked to `(user + application)`
+- ✅ Session control per application
 
 ---
 
-## 🚀 Configuração e Instalação
+## 🚀 Setup and Installation
 
-### Pré-requisitos
+### Prerequisites
 
-- Node.js (versão 18 ou superior)
-- pnpm (ou npm/yarn)
-- MongoDB (versão 5.0 ou superior)
+- Node.js (version 18 or higher)
+- pnpm (or npm/yarn)
+- MongoDB (version 5.0 or higher)
 
-### Instalação
+### Installation
 
 ```bash
-# Instalar dependências
+# Install dependencies
 pnpm install
 
-# Configurar variáveis de ambiente (veja seção abaixo)
+# Configure environment variables (see section below)
 cp .env.example .env
 
-# Executar em modo desenvolvimento
+# Run in development mode
 pnpm run start:dev
 ```
 
-### Variáveis de Ambiente
+### Environment Variables
 
-Crie um arquivo `.env` na raiz do projeto com as seguintes variáveis:
+Create a `.env` file in the project root with the following variables:
 
 ```env
-# Servidor
+# Server
 PORT=3000
 NODE_ENV=development
 
@@ -60,48 +60,58 @@ MONGO_URI=mongodb://localhost:27017
 ACCESS_TOKEN_SECRET=your-super-secret-access-token-key-here
 REFRESH_TOKEN_SECRET=your-super-secret-refresh-token-key-here
 
-# Google OAuth (opcional, necessário apenas se usar login com Google)
+# Google OAuth (optional, only needed if using Google login)
 GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+
+# Admin
+ADMIN_PASS_KEY=your-admin-pass-key-here
 ```
 
-**⚠️ Importante:** 
-- Use chaves seguras e aleatórias para os secrets JWT em produção
-- Nunca commite o arquivo `.env` no repositório
-- Em produção, use variáveis de ambiente do sistema ou um gerenciador de secrets
+**⚠️ Important:** 
+- Use secure and random keys for JWT secrets in production
+- Never commit the `.env` file to the repository
+- In production, use system environment variables or a secrets manager
 
 ---
 
-## 📚 Guia de Integração
+## 📚 Integration Guide
 
-Este guia explica como sistemas terceiros devem integrar com o Identity Service.
+This guide explains how third-party systems should integrate with the Identity Service.
 
-### Conceitos Importantes
+### Important Concepts
 
-#### Application (Cliente do Auth Service)
+#### Application (Auth Service Client)
 
-Uma **Application** representa quem consome o serviço de autenticação. Pode ser:
-- Uma aplicação web frontend
-- Um microsserviço backend
-- Qualquer serviço que precisa autenticar usuários
+An **Application** represents who consumes the authentication service. It can be:
+- A web frontend application
+- A backend microservice
+- Any service that needs to authenticate users
 
-Cada Application possui:
-- `clientId`: Identificador único usado no header `x-client-id`
-- `clientSecret`: Secret usado para validação (gerenciado internamente)
-- `isActive`: Status de ativação da aplicação
+Each Application has:
+- `clientId`: Unique identifier used in the `x-client-id` header
+- `clientSecret`: Secret used for validation (managed internally)
+- `isActive`: Application activation status
 
-#### Identificação da Application
+#### Application Identification
 
-**Todas as requisições** devem incluir o header `x-client-id` com o `clientId` da sua Application:
+**All requests** must include the following headers with your Application credentials:
 
 ```http
-x-client-id: seu-client-id-aqui
+x-client-id: your-client-id-here
+x-client-secret: your-client-secret-here
 ```
 
-Sem este header, a requisição será rejeitada com status `401 Unauthorized`.
+Without these headers, the request will be rejected with status `401 Unauthorized`.
+
+**⚠️ Important about `clientSecret`:**
+- The `clientSecret` is a sensitive credential and must be kept secure
+- **Never expose the `clientSecret`** in the frontend or in public client code
+- Use only in secure server-side environments
+- For frontend applications, consider using a backend proxy to protect the `clientSecret`
 
 ---
 
-## 🔐 Endpoints de Autenticação
+## 🔐 Authentication Endpoints
 
 ### Base URL
 
@@ -109,40 +119,42 @@ Sem este header, a requisição será rejeitada com status `401 Unauthorized`.
 http://localhost:3000/auth
 ```
 
-Em produção, substitua pela URL do seu servidor.
+In production, replace with your server URL.
 
 ---
 
-### 1. Criar Usuário (Signup)
+### 1. Create User (Signup)
 
-Cria um novo usuário no sistema e o associa à sua Application.
+Creates a new user in the system and associates them with your Application.
 
 **Endpoint:** `POST /auth/signup`
 
 **Headers:**
 ```http
 Content-Type: application/json
-x-client-id: seu-client-id
+x-client-id: your-client-id
+x-client-secret: your-client-secret
 ```
 
 **Body:**
 ```json
 {
-  "name": "João Silva",
-  "email": "joao@example.com",
-  "password": "senhaSegura123"
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "securePassword123"
+}
 ```
 
-**Validações:**
-- `name`: Obrigatório, mínimo 1 caractere
-- `email`: Obrigatório, deve ser um email válido
-- `password`: Obrigatório, mínimo 6 caracteres
+**Validations:**
+- `name`: Required, minimum 1 character
+- `email`: Required, must be a valid email
+- `password`: Required, minimum 6 characters
 
-**Resposta de Sucesso (200 OK):**
+**Success Response (200 OK):**
 ```json
 {
   "id": "507f1f77bcf86cd799439011",
-  "email": "joao@example.com",
+  "email": "john@example.com",
   "emailVerified": false,
   "applications": [
     {
@@ -156,15 +168,15 @@ x-client-id: seu-client-id
 }
 ```
 
-**Comportamentos Especiais:**
+**Special Behaviors:**
 
-1. **Usuário já existe mas não está associado à Application:**
-   - O usuário é automaticamente associado à sua Application
-   - Se o usuário não tiver senha local, ela é adicionada
-   - Retorna os dados do usuário atualizado
+1. **User already exists but is not associated with the Application:**
+   - The user is automatically associated with your Application
+   - If the user doesn't have a local password, it is added
+   - Returns the updated user data
 
-2. **Usuário já existe e já está associado à Application:**
-   - Retorna erro `409 Conflict`:
+2. **User already exists and is already associated with the Application:**
+   - Returns error `409 Conflict`:
    ```json
    {
      "statusCode": 409,
@@ -172,64 +184,66 @@ x-client-id: seu-client-id
    }
    ```
 
-**Exemplo de Requisição (cURL):**
+**Request Example (cURL):**
 ```bash
 curl -X POST http://localhost:3000/auth/signup \
   -H "Content-Type: application/json" \
-  -H "x-client-id: seu-client-id" \
+  -H "x-client-id: your-client-id" \
+  -H "x-client-secret: your-client-secret" \
   -d '{
-    "name": "João Silva",
-    "email": "joao@example.com",
-    "password": "senhaSegura123"
+    "name": "John Doe",
+    "email": "john@example.com",
+    "password": "securePassword123"
   }'
 ```
 
 ---
 
-### 2. Login (Email/Senha)
+### 2. Login (Email/Password)
 
-Autentica um usuário existente e retorna tokens de acesso.
+Authenticates an existing user and returns access tokens.
 
 **Endpoint:** `POST /auth/login`
 
 **Headers:**
 ```http
 Content-Type: application/json
-x-client-id: seu-client-id
+x-client-id: your-client-id
+x-client-secret: your-client-secret
 ```
 
 **Body:**
 ```json
 {
-  "email": "joao@example.com",
-  "password": "senhaSegura123"
+  "email": "john@example.com",
+  "password": "securePassword123"
 }
 ```
 
-**Validações:**
-- `email`: Obrigatório
-- `password`: Obrigatório
+**Validations:**
+- `email`: Required
+- `password`: Required
 
-**Resposta de Sucesso (200 OK):**
+**Success Response (200 OK):**
 ```json
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
-**⚠️ Importante sobre Refresh Token:**
-O `refreshToken` é enviado automaticamente como um **cookie HTTP-only** chamado `refreshToken`. Ele não aparece no corpo da resposta JSON por questões de segurança.
+**⚠️ Important about Refresh Token:**
+The `refreshToken` is automatically sent as an **HTTP-only cookie** named `refreshToken`. It does not appear in the JSON response body for security reasons.
 
-**Propriedades do Cookie:**
-- Nome: `refreshToken`
-- `httpOnly: true` (não acessível via JavaScript)
-- `secure: true` (apenas HTTPS em produção)
-- `sameSite: 'lax'` (proteção CSRF)
-- Validade: 24 horas
+**Cookie Properties:**
+- Name: `refreshToken`
+- `httpOnly: true` (not accessible via JavaScript)
+- `secure: true` (HTTPS only in production)
+- `sameSite: 'lax'` (CSRF protection)
+- Validity: 24 hours
 
-**Erros Possíveis:**
+**Possible Errors:**
 
-1. **Credenciais inválidas (401):**
+1. **Invalid credentials (401):**
 ```json
 {
   "statusCode": 401,
@@ -237,7 +251,7 @@ O `refreshToken` é enviado automaticamente como um **cookie HTTP-only** chamado
 }
 ```
 
-2. **Usuário não associado à Application (401):**
+2. **User not associated with Application (401):**
 ```json
 {
   "statusCode": 401,
@@ -245,7 +259,7 @@ O `refreshToken` é enviado automaticamente como um **cookie HTTP-only** chamado
 }
 ```
 
-3. **Usuário bloqueado (401):**
+3. **User blocked (401):**
 ```json
 {
   "statusCode": 401,
@@ -253,32 +267,34 @@ O `refreshToken` é enviado automaticamente como um **cookie HTTP-only** chamado
 }
 ```
 
-**Exemplo de Requisição (cURL):**
+**Request Example (cURL):**
 ```bash
 curl -X POST http://localhost:3000/auth/login \
   -H "Content-Type: application/json" \
-  -H "x-client-id: seu-client-id" \
+  -H "x-client-id: your-client-id" \
+  -H "x-client-secret: your-client-secret" \
   -d '{
-    "email": "joao@example.com",
-    "password": "senhaSegura123"
+    "email": "john@example.com",
+    "password": "securePassword123"
   }' \
   -c cookies.txt
 ```
 
-**Nota:** O flag `-c cookies.txt` salva os cookies recebidos para uso posterior.
+**Note:** The `-c cookies.txt` flag saves the received cookies for later use.
 
 ---
 
-### 3. Login com Google (OAuth)
+### 3. Login with Google (OAuth)
 
-Autentica um usuário usando credenciais do Google.
+Authenticates a user using Google credentials.
 
 **Endpoint:** `POST /auth/login/google`
 
 **Headers:**
 ```http
 Content-Type: application/json
-x-client-id: seu-client-id
+x-client-id: your-client-id
+x-client-secret: your-client-secret
 ```
 
 **Body:**
@@ -288,26 +304,27 @@ x-client-id: seu-client-id
 }
 ```
 
-O `credential` é o ID token retornado pelo Google Sign-In no frontend.
+The `credential` is the ID token returned by Google Sign-In on the frontend.
 
-**Resposta de Sucesso (200 OK):**
+**Success Response (200 OK):**
 ```json
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
-**Comportamento:**
-- Se o usuário não existir, ele é criado automaticamente
-- Se o usuário existir mas não estiver associado à Application, ele é associado
-- O email do Google é automaticamente verificado (`emailVerified: true`)
-- O `refreshToken` é enviado como cookie (mesmo comportamento do login normal)
+**Behavior:**
+- If the user doesn't exist, they are created automatically
+- If the user exists but is not associated with the Application, they are associated
+- The Google email is automatically verified (`emailVerified: true`)
+- The `refreshToken` is sent as a cookie (same behavior as normal login)
 
-**Exemplo de Requisição (cURL):**
+**Request Example (cURL):**
 ```bash
 curl -X POST http://localhost:3000/auth/login/google \
   -H "Content-Type: application/json" \
-  -H "x-client-id: seu-client-id" \
+  -H "x-client-id: your-client-id" \
+  -H "x-client-secret: your-client-secret" \
   -d '{
     "credential": "eyJhbGciOiJSUzI1NiIsImtpZCI6Ij..."
   }' \
@@ -318,33 +335,34 @@ curl -X POST http://localhost:3000/auth/login/google \
 
 ### 4. Refresh Token
 
-Renova o access token usando o refresh token armazenado.
+Renews the access token using the stored refresh token.
 
 **Endpoint:** `POST /auth/refresh`
 
 **Headers:**
 ```http
-x-client-id: seu-client-id
+x-client-id: your-client-id
+x-client-secret: your-client-secret
 Cookie: refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-**⚠️ Importante:**
-- O refresh token deve ser enviado como **cookie** (não no body ou header)
-- O access token atual deve ser enviado no header `Authorization: Bearer <token>`
-- O `x-client-id` deve corresponder ao `aud` do token
+**⚠️ Important:**
+- The refresh token must be sent as a **cookie** (not in body or header)
+- The current access token must be sent in the `Authorization: Bearer <token>` header
+- The `x-client-id` must match the token's `aud`
 
-**Resposta de Sucesso (200 OK):**
+**Success Response (200 OK):**
 ```json
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
-**⚠️ Nota:** O refresh token **não é renovado** nesta operação. Ele continua válido até expirar (3 dias) ou ser invalidado via logout.
+**⚠️ Note:** The refresh token **is not renewed** in this operation. It remains valid until it expires (3 days) or is invalidated via logout.
 
-**Erros Possíveis:**
+**Possible Errors:**
 
-1. **Refresh token não encontrado (401):**
+1. **Refresh token not found (401):**
 ```json
 {
   "statusCode": 401,
@@ -352,7 +370,7 @@ Cookie: refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 }
 ```
 
-2. **Refresh token expirado (401):**
+2. **Refresh token expired (401):**
 ```json
 {
   "statusCode": 401,
@@ -360,7 +378,7 @@ Cookie: refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 }
 ```
 
-3. **Refresh token inválido (401):**
+3. **Invalid refresh token (401):**
 ```json
 {
   "statusCode": 401,
@@ -368,7 +386,7 @@ Cookie: refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 }
 ```
 
-4. **Usuário não ativo na Application (403):**
+4. **User not active in Application (403):**
 ```json
 {
   "statusCode": 403,
@@ -376,122 +394,125 @@ Cookie: refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 }
 ```
 
-**Exemplo de Requisição (cURL):**
+**Request Example (cURL):**
 ```bash
 curl -X POST http://localhost:3000/auth/refresh \
-  -H "x-client-id: seu-client-id" \
+  -H "x-client-id: your-client-id" \
+  -H "x-client-secret: your-client-secret" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
   -b cookies.txt
 ```
 
-**Nota:** O flag `-b cookies.txt` envia os cookies salvos anteriormente.
+**Note:** The `-b cookies.txt` flag sends the previously saved cookies.
 
 ---
 
 ### 5. Logout
 
-Invalida o refresh token do usuário na Application atual.
+Invalidates the user's refresh token in the current Application.
 
 **Endpoint:** `POST /auth/logout`
 
 **Headers:**
 ```http
-x-client-id: seu-client-id
+x-client-id: your-client-id
+x-client-secret: your-client-secret
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-**Resposta de Sucesso (200 OK):**
+**Success Response (200 OK):**
 ```json
 {
   "message": "Logout realizado com sucesso"
 }
 ```
 
-**Comportamento:**
-- Remove o refresh token do banco de dados para a combinação `(user + application)`
-- O access token atual continua válido até expirar (não é invalidado imediatamente)
-- Após o logout, o usuário não poderá mais fazer refresh e precisará fazer login novamente
+**Behavior:**
+- Removes the refresh token from the database for the `(user + application)` combination
+- The current access token remains valid until it expires (not invalidated immediately)
+- After logout, the user will no longer be able to refresh and will need to login again
 
-**Exemplo de Requisição (cURL):**
+**Request Example (cURL):**
 ```bash
 curl -X POST http://localhost:3000/auth/logout \
-  -H "x-client-id: seu-client-id" \
+  -H "x-client-id: your-client-id" \
+  -H "x-client-secret: your-client-secret" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
 
 ---
 
-## 🔑 Estrutura dos Tokens JWT
+## 🔑 JWT Token Structure
 
 ### Access Token
 
-O access token é um JWT que contém as seguintes claims:
+The access token is a JWT containing the following claims:
 
 ```json
 {
   "sub": "507f1f77bcf86cd799439011",  // User ID
-  "email": "joao@example.com",         // Email do usuário
-  "aud": "seu-client-id",               // Application clientId (IMPORTANTE!)
+  "email": "john@example.com",         // User email
+  "aud": "your-client-id",               // Application clientId (IMPORTANT!)
   "iat": 1705312800,                   // Issued at (timestamp)
   "exp": 1705314600                    // Expiration (timestamp)
 }
 ```
 
-**Propriedades:**
-- **Validade:** 30 minutos
-- **Formato:** JWT (JSON Web Token)
-- **Algoritmo:** HS256 (HMAC SHA-256)
+**Properties:**
+- **Validity:** 30 minutes
+- **Format:** JWT (JSON Web Token)
+- **Algorithm:** HS256 (HMAC SHA-256)
 
-**⚠️ Claim Crítica: `aud` (Audience)**
+**⚠️ Critical Claim: `aud` (Audience)**
 
-O campo `aud` contém o `clientId` da Application que solicitou o token. Este campo é **essencial** para validação em microsserviços:
+The `aud` field contains the `clientId` of the Application that requested the token. This field is **essential** for validation in microservices:
 
-- Tokens são **específicos por Application**
-- Um token emitido para Application A **não pode** ser usado em Application B
-- Microsserviços devem validar que `aud === seu-client-id`
+- Tokens are **application-specific**
+- A token issued for Application A **cannot** be used in Application B
+- Microservices must validate that `aud === your-client-id`
 
 ### Refresh Token
 
-O refresh token também é um JWT, mas com estrutura mais simples:
+The refresh token is also a JWT, but with a simpler structure:
 
 ```json
 {
   "sub": "507f1f77bcf86cd799439011",  // User ID
-  "aud": "seu-client-id",              // Application clientId
+  "aud": "your-client-id",              // Application clientId
   "iat": 1705312800,                   // Issued at
-  "exp": 1705406400                    // Expiration (3 dias)
+  "exp": 1705406400                    // Expiration (3 days)
 }
 ```
 
-**Propriedades:**
-- **Validade:** 3 dias
-- **Armazenamento:** Banco de dados (hash) + Cookie HTTP-only
-- **Uso:** Apenas para renovar access tokens
+**Properties:**
+- **Validity:** 3 days
+- **Storage:** Database (hash) + HTTP-only Cookie
+- **Usage:** Only for renewing access tokens
 
 ---
 
-## 🛡️ Validação de Tokens em Microsserviços
+## 🛡️ Token Validation in Microservices
 
-Quando um microsserviço recebe um access token, ele deve validar:
+When a microservice receives an access token, it must validate:
 
-### 1. Validação Básica do JWT
+### 1. Basic JWT Validation
 
 ```typescript
-// Pseudocódigo
+// Pseudocode
 const payload = jwt.verify(token, ACCESS_TOKEN_SECRET);
 
-// Verificar expiração
+// Check expiration
 if (payload.exp < Date.now() / 1000) {
   throw new Error('Token expired');
 }
 ```
 
-### 2. Validação do Audience (`aud`)
+### 2. Audience (`aud`) Validation
 
-**⚠️ CRÍTICO:** Sempre valide que o `aud` corresponde ao `clientId` da sua Application:
+**⚠️ CRITICAL:** Always validate that `aud` matches your Application's `clientId`:
 
 ```typescript
-// Pseudocódigo
+// Pseudocode
 const myClientId = process.env.MY_CLIENT_ID;
 
 if (payload.aud !== myClientId) {
@@ -501,9 +522,9 @@ if (payload.aud !== myClientId) {
 }
 ```
 
-### 3. Validação do Issuer (`iss`) - Opcional
+### 3. Issuer (`iss`) Validation - Optional
 
-Se você configurar um issuer no Identity Service, valide também:
+If you configure an issuer in the Identity Service, also validate:
 
 ```typescript
 if (payload.iss !== 'identity-service') {
@@ -511,9 +532,9 @@ if (payload.iss !== 'identity-service') {
 }
 ```
 
-### 4. Validação do Header `x-client-id`
+### 4. `x-client-id` Header Validation
 
-Além de validar o token, sempre verifique que o header `x-client-id` corresponde ao `aud`:
+In addition to validating the token, always verify that the `x-client-id` header matches the `aud`:
 
 ```typescript
 const clientIdFromHeader = request.headers['x-client-id'];
@@ -525,21 +546,22 @@ if (payload.aud !== clientIdFromHeader) {
 }
 ```
 
-**Por que isso é importante?**
-- Impede reutilização de tokens entre serviços
-- Garante isolamento de permissões
-- Previne vazamento de contexto entre aplicações
+**Why is this important?**
+- Prevents token reuse between services
+- Ensures permission isolation
+- Prevents context leakage between applications
 
 ---
 
-## 📝 Exemplos de Integração
+## 📝 Integration Examples
 
-### Exemplo: Frontend React/Next.js
+### Example: React/Next.js Frontend
 
 ```typescript
 // services/auth.ts
 const API_BASE_URL = 'http://localhost:3000';
-const CLIENT_ID = 'seu-client-id';
+const CLIENT_ID = 'your-client-id';
+const CLIENT_SECRET = 'your-client-secret'; // ⚠️ Never expose in frontend!
 
 export async function signup(name: string, email: string, password: string) {
   const response = await fetch(`${API_BASE_URL}/auth/signup`, {
@@ -547,6 +569,7 @@ export async function signup(name: string, email: string, password: string) {
     headers: {
       'Content-Type': 'application/json',
       'x-client-id': CLIENT_ID,
+      'x-client-secret': CLIENT_SECRET,
     },
     body: JSON.stringify({ name, email, password }),
   });
@@ -565,8 +588,9 @@ export async function login(email: string, password: string) {
     headers: {
       'Content-Type': 'application/json',
       'x-client-id': CLIENT_ID,
+      'x-client-secret': CLIENT_SECRET,
     },
-    credentials: 'include', // Importante para receber cookies
+    credentials: 'include', // Important for receiving cookies
     body: JSON.stringify({ email, password }),
   });
 
@@ -577,7 +601,7 @@ export async function login(email: string, password: string) {
 
   const data = await response.json();
   
-  // Salvar access token
+  // Save access token
   localStorage.setItem('accessToken', data.accessToken);
   
   return data;
@@ -588,9 +612,10 @@ export async function refreshToken(accessToken: string) {
     method: 'POST',
     headers: {
       'x-client-id': CLIENT_ID,
+      'x-client-secret': CLIENT_SECRET,
       'Authorization': `Bearer ${accessToken}`,
     },
-    credentials: 'include', // Envia cookies automaticamente
+    credentials: 'include', // Sends cookies automatically
   });
 
   if (!response.ok) {
@@ -608,6 +633,7 @@ export async function logout(accessToken: string) {
     method: 'POST',
     headers: {
       'x-client-id': CLIENT_ID,
+      'x-client-secret': CLIENT_SECRET,
       'Authorization': `Bearer ${accessToken}`,
     },
   });
@@ -616,7 +642,7 @@ export async function logout(accessToken: string) {
 }
 ```
 
-### Exemplo: Backend NestJS (Microsserviço)
+### Example: NestJS Backend (Microservice)
 
 ```typescript
 // guards/jwt-auth.guard.ts
@@ -644,13 +670,13 @@ export class JwtAuthGuard implements CanActivate {
         secret: this.configService.get('ACCESS_TOKEN_SECRET'),
       });
 
-      // Validar audience
+      // Validate audience
       const myClientId = this.configService.get('MY_CLIENT_ID');
       if (payload.aud !== myClientId) {
         throw new UnauthorizedException('Invalid token audience');
       }
 
-      // Validar header x-client-id
+      // Validate x-client-id header
       const clientIdFromHeader = request.headers['x-client-id'];
       if (payload.aud !== clientIdFromHeader) {
         throw new UnauthorizedException('Token audience does not match header');
@@ -673,121 +699,123 @@ export class JwtAuthGuard implements CanActivate {
 
 ---
 
-## 🔄 Fluxo Completo de Autenticação
+## 🔄 Complete Authentication Flow
 
-### 1. Primeiro Acesso (Novo Usuário)
-
-```
-1. Cliente → POST /auth/signup
-   ↓
-2. Identity Service cria usuário e associa à Application
-   ↓
-3. Cliente recebe dados do usuário
-   ↓
-4. Cliente → POST /auth/login
-   ↓
-5. Identity Service retorna accessToken (JSON) + refreshToken (Cookie)
-   ↓
-6. Cliente salva accessToken e usa em requisições autenticadas
-```
-
-### 2. Login (Usuário Existente)
+### 1. First Access (New User)
 
 ```
-1. Cliente → POST /auth/login
+1. Client → POST /auth/signup
    ↓
-2. Identity Service valida credenciais
+2. Identity Service creates user and associates with Application
    ↓
-3. Identity Service retorna accessToken (JSON) + refreshToken (Cookie)
+3. Client receives user data
    ↓
-4. Cliente salva accessToken
+4. Client → POST /auth/login
+   ↓
+5. Identity Service returns accessToken (JSON) + refreshToken (Cookie)
+   ↓
+6. Client saves accessToken and uses it in authenticated requests
 ```
 
-### 3. Renovação de Token
+### 2. Login (Existing User)
 
 ```
-1. Access token está próximo de expirar (ex: 5 min restantes)
+1. Client → POST /auth/login
    ↓
-2. Cliente → POST /auth/refresh
-   (com accessToken atual + refreshToken no cookie)
+2. Identity Service validates credentials
    ↓
-3. Identity Service valida refreshToken e gera novo accessToken
+3. Identity Service returns accessToken (JSON) + refreshToken (Cookie)
    ↓
-4. Cliente recebe novo accessToken e atualiza armazenamento
+4. Client saves accessToken
+```
+
+### 3. Token Renewal
+
+```
+1. Access token is about to expire (e.g., 5 min remaining)
+   ↓
+2. Client → POST /auth/refresh
+   (with current accessToken + refreshToken in cookie)
+   ↓
+3. Identity Service validates refreshToken and generates new accessToken
+   ↓
+4. Client receives new accessToken and updates storage
 ```
 
 ### 4. Logout
 
 ```
-1. Cliente → POST /auth/logout
-   (com accessToken no header Authorization)
+1. Client → POST /auth/logout
+   (with accessToken in Authorization header)
    ↓
-2. Identity Service remove refreshToken do banco
+2. Identity Service removes refreshToken from database
    ↓
-3. Cliente remove accessToken do armazenamento local
+3. Client removes accessToken from local storage
    ↓
-4. Próxima tentativa de refresh falhará
+4. Next refresh attempt will fail
 ```
 
 ---
 
-## ⚠️ Boas Práticas e Considerações
+## ⚠️ Best Practices and Considerations
 
-### Segurança
+### Security
 
-1. **Nunca exponha o `clientSecret`** no frontend ou em código cliente
-2. **Sempre use HTTPS** em produção para proteger tokens e cookies
-3. **Valide sempre o `aud`** em microsserviços
-4. **Não armazene tokens em localStorage** se possível (prefira httpOnly cookies)
-5. **Implemente refresh automático** antes do access token expirar
+1. **Never expose the `clientSecret`** in the frontend or in public client code
+   - The `clientSecret` must be sent in the `x-client-secret` header in all requests
+   - For frontend applications, use a backend proxy to protect the `clientSecret`
+2. **Always use HTTPS** in production to protect tokens and cookies
+3. **Always validate `aud`** in microservices
+4. **Do not store tokens in localStorage** if possible (prefer httpOnly cookies)
+5. **Implement automatic refresh** before the access token expires
 
 ### Performance
 
-1. **Cache do access token** no cliente (evita requisições desnecessárias)
-2. **Refresh proativo** (renove antes de expirar, ex: 5 minutos antes)
-3. **Tratamento de erros** de refresh (redirecionar para login se necessário)
+1. **Cache the access token** on the client (avoids unnecessary requests)
+2. **Proactive refresh** (renew before expiring, e.g., 5 minutes before)
+3. **Error handling** for refresh (redirect to login if necessary)
 
-### Tratamento de Erros
+### Error Handling
 
-Sempre trate os seguintes cenários:
+Always handle the following scenarios:
 
-- **401 Unauthorized:** Token inválido/expirado → Tentar refresh ou redirecionar para login
-- **403 Forbidden:** Usuário bloqueado ou Application inativa → Redirecionar para login
-- **409 Conflict:** Usuário já existe → Mostrar mensagem apropriada ou fazer login
+- **401 Unauthorized:** Invalid/expired token → Try refresh or redirect to login
+- **403 Forbidden:** User blocked or Application inactive → Redirect to login
+- **409 Conflict:** User already exists → Show appropriate message or login
 
 ---
 
-## 🧪 Testando a API
+## 🧪 Testing the API
 
-### Swagger UI (Desenvolvimento)
+### Swagger UI (Development)
 
-Quando `NODE_ENV=development`, o Swagger UI está disponível em:
+When `NODE_ENV=development`, the Swagger UI is available at:
 
 ```
 http://localhost:3000/api
 ```
 
-Use esta interface para testar os endpoints interativamente.
+Use this interface to test endpoints interactively.
 
-### Exemplos com cURL
+### cURL Examples
 
-Veja a seção de cada endpoint acima para exemplos completos de requisições cURL.
+See each endpoint section above for complete cURL request examples.
 
 ---
 
-## 📦 Scripts Disponíveis
+## 📦 Available Scripts
 
 ```bash
-# Desenvolvimento (watch mode)
+# Development (watch mode)
 pnpm run start:dev
 
-# Produção
+# Production
 pnpm run start:prod
 
 # Build
 pnpm run build
 
-# Testes
+# Tests
 pnpm run test
 pnpm run test:e2e
 pnpm run test:cov
@@ -798,24 +826,26 @@ pnpm run lint
 
 ---
 
-## 🏗️ Arquitetura
+## 🏗️ Architecture
 
-O projeto segue uma arquitetura limpa com separação de responsabilidades:
+The project follows a clean architecture with separation of concerns:
 
 ```
 src/
-├── application/          # Casos de uso e controllers
+├── application/          # Use cases and controllers
 │   └── usecases/
-│       └── auth/
-│           ├── signup/
-│           ├── login/
-│           ├── refresh/
-│           └── logout/
-├── domain/              # Entidades e interfaces
+│       ├── auth/
+│       │   ├── signup/
+│       │   ├── login/
+│       │   ├── refresh/
+│       │   └── logout/
+│       └── admin/
+│           └── create-application/
+├── domain/              # Entities and interfaces
 │   ├── entities/
 │   ├── repositories/
 │   └── services/
-└── infrastructure/      # Implementações concretas
+└── infrastructure/      # Concrete implementations
     ├── auth/
     ├── database/
     ├── guards/
@@ -824,12 +854,12 @@ src/
 
 ---
 
-## 📄 Licença
+## 📄 License
 
-Este projeto é privado e não possui licença pública.
+This project is private and has no public license.
 
 ---
 
-## 🤝 Suporte
+## 🤝 Support
 
-Para dúvidas ou problemas de integração, entre em contato com a equipe de desenvolvimento.
+For questions or integration issues, contact the development team.

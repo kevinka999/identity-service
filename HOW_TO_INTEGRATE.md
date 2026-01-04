@@ -1,491 +1,554 @@
-# Como Integrar com o Identity Service
+# How to Integrate with Identity Service
 
-Guia rápido para sistemas terceiros que desejam utilizar o serviço de autenticação.
-
----
-
-## 📋 O que você precisa saber
-
-### Conceito Principal
-
-O Identity Service fornece **autenticação centralizada** para múltiplas aplicações. Cada aplicação tem seu próprio contexto, mas compartilha a mesma base de usuários.
-
-**Regra de ouro:** Identidade é global, acesso é contextual por aplicação.
-
-### O que você PRECISA ter
-
-✅ **Um `clientId` válido** - Fornecido pela equipe do Identity Service  
-✅ **Suporte a cookies HTTP** - Para receber o refresh token automaticamente  
-✅ **Capacidade de enviar headers HTTP** - Especialmente `x-client-id`  
-
-### O que você NÃO precisa
-
-❌ **Não precisa** de `clientSecret` no frontend (apenas no backend se necessário)  
-❌ **Não precisa** gerenciar refresh tokens manualmente (vem como cookie)   
-❌ **Não precisa** implementar lógica de hash de senha  
+Quick guide for third-party systems that want to use the authentication service.
 
 ---
 
-## 🚀 Início Rápido
+## 📋 What You Need to Know
 
-### 1. Obter seu `clientId`
+### Core Concept
 
-Entre em contato com a equipe do Identity Service para obter:
-- Seu `clientId` único
-- A URL base da API (ex: `https://auth.example.com`)
+The Identity Service provides **centralized authentication** for multiple applications. Each application has its own context, but shares the same user base.
 
-### 2. Configurar o Header Obrigatório
+**Golden rule:** Identity is global, access is contextual per application.
 
-**Todas as requisições** devem incluir:
+### What You NEED to Have
+
+✅ **A valid `clientId`** - Provided by the Identity Service team  
+✅ **A valid `clientSecret`** - Provided by the Identity Service team  
+✅ **HTTP cookie support** - To automatically receive the refresh token  
+✅ **Ability to send HTTP headers** - Especially `x-client-id` and `x-client-secret`
+
+**⚠️ Important about `clientSecret`:**
+
+- The `clientSecret` is a sensitive credential and must be kept secure
+- **Never expose the `clientSecret`** in the frontend or in public client code
+- Use only in secure server-side environments
+- For frontend applications, consider using a backend proxy to protect the `clientSecret`
+
+### What You DON'T Need
+
+❌ **Don't need** to manually manage refresh tokens (comes as cookie)  
+❌ **Don't need** to implement password hashing logic  
+❌ **Don't need** to create user tables - Everything is managed by Identity Service
+
+---
+
+## 🚀 Quick Start
+
+### 1. Get Your Credentials
+
+Contact the Identity Service team to obtain:
+
+- Your unique `clientId`
+- Your `clientSecret` (keep it secure!)
+- The API base URL (e.g., `https://auth.example.com`)
+
+### 2. Configure Required Headers
+
+**All requests** must include:
 
 ```http
-x-client-id: seu-client-id-aqui
+x-client-id: your-client-id-here
+x-client-secret: your-client-secret-here
 ```
 
-Sem este header, todas as requisições retornarão `401 Unauthorized`.
+Without these headers, all requests will return `401 Unauthorized`.
 
-### 3. Endpoints Disponíveis
+### 3. Available Endpoints
 
 ```
-POST /auth/signup      - Criar novo usuário
-POST /auth/login       - Login com email/senha
-POST /auth/login/google - Login com Google OAuth
-POST /auth/refresh     - Renovar access token
-POST /auth/logout      - Fazer logout
+POST /auth/signup      - Create new user
+POST /auth/login       - Login with email/password
+POST /auth/login/google - Login with Google OAuth
+POST /auth/refresh     - Renew access token
+POST /auth/logout      - Logout
 ```
 
 ---
 
-## 📝 Integração Passo a Passo
+## 📝 Step-by-Step Integration
 
-### Passo 1: Criar Usuário (Signup)
+### Step 1: Create User (Signup)
 
-**Quando usar:** Primeira vez que um usuário se registra na sua aplicação.
+**When to use:** First time a user registers in your application.
 
-**Requisição:**
+**Request:**
+
 ```http
 POST /auth/signup
 Headers:
   Content-Type: application/json
-  x-client-id: seu-client-id
+  x-client-id: your-client-id
+  x-client-secret: your-client-secret
 
 Body:
 {
-  "name": "João Silva",
-  "email": "joao@example.com",
-  "password": "senhaSegura123"
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "securePassword123"
 }
 ```
 
-**Resposta:**
+**Response:**
+
 ```json
 {
   "id": "507f1f77bcf86cd799439011",
-  "email": "joao@example.com",
+  "email": "john@example.com",
   "emailVerified": false,
   "applications": [...],
   "createdAt": "2024-01-15T10:30:00.000Z"
 }
 ```
 
-**O que acontece:**
-- Se o email já existe mas não está na sua aplicação → usuário é associado automaticamente
-- Se o email já existe na sua aplicação → erro `409 Conflict`
-- Se é um email novo → usuário é criado e associado à sua aplicação
+**What happens:**
 
-**Você precisa fazer:**
-- Armazenar o `id` do usuário (opcional, para referência)
-- Redirecionar para login após signup bem-sucedido
+- If email already exists but is not in your application → user is automatically associated
+- If email already exists in your application → error `409 Conflict`
+- If it's a new email → user is created and associated with your application
+
+**What you need to do:**
+
+- Store the user `id` (optional, for reference)
+- Redirect to login after successful signup
 
 ---
 
-### Passo 2: Login
+### Step 2: Login
 
-**Quando usar:** Usuário já tem conta e quer fazer login.
+**When to use:** User already has an account and wants to login.
 
-**Requisição:**
+**Request:**
+
 ```http
 POST /auth/login
 Headers:
   Content-Type: application/json
-  x-client-id: seu-client-id
+  x-client-id: your-client-id
+  x-client-secret: your-client-secret
 
 Body:
 {
-  "email": "joao@example.com",
-  "password": "senhaSegura123"
+  "email": "john@example.com",
+  "password": "securePassword123"
 }
 ```
 
-**Resposta:**
+**Response:**
+
 ```json
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
-**⚠️ Importante:**
-- O `refreshToken` vem automaticamente como **cookie HTTP-only**
-- Você **não precisa** fazer nada com o cookie, o navegador gerencia automaticamente
-- Salve apenas o `accessToken` para usar nas requisições autenticadas
+**⚠️ Important:**
 
-**Você precisa fazer:**
-- Salvar o `accessToken` (localStorage, sessionStorage, ou memória)
-- Usar o `accessToken` no header `Authorization: Bearer <token>` em requisições autenticadas
-- Configurar `credentials: 'include'` nas requisições fetch para enviar/receber cookies
+- The `refreshToken` comes automatically as an **HTTP-only cookie**
+- You **don't need** to do anything with the cookie, the browser manages it automatically
+- Just save the `accessToken` to use in authenticated requests
+
+**What you need to do:**
+
+- Save the `accessToken` (localStorage, sessionStorage, or memory)
+- Use the `accessToken` in the `Authorization: Bearer <token>` header in authenticated requests
+- Configure `credentials: 'include'` in fetch requests to send/receive cookies
 
 ---
 
-### Passo 3: Usar o Access Token
+### Step 3: Use the Access Token
 
-**Quando usar:** Em todas as requisições que precisam de autenticação.
+**When to use:** In all requests that need authentication.
 
-**Como enviar:**
+**How to send:**
+
 ```http
-GET /sua-api/protected-endpoint
+GET /your-api/protected-endpoint
 Headers:
   Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-  x-client-id: seu-client-id
+  x-client-id: your-client-id
+  x-client-secret: your-client-secret
 ```
 
-**Validade do token:**
-- Access token expira em **30 minutos**
-- Você precisa renová-lo antes de expirar usando o refresh token
+**Token validity:**
 
-**Você precisa fazer:**
-- Interceptar requisições HTTP para adicionar o token automaticamente
-- Detectar quando o token expira (erro 401)
-- Chamar o endpoint de refresh quando necessário
+- Access token expires in **30 minutes**
+- You need to renew it before it expires using the refresh token
+
+**What you need to do:**
+
+- Intercept HTTP requests to automatically add the token
+- Detect when the token expires (401 error)
+- Call the refresh endpoint when necessary
 
 ---
 
-### Passo 4: Renovar Token (Refresh)
+### Step 4: Renew Token (Refresh)
 
-**Quando usar:** Quando o access token expira ou está próximo de expirar.
+**When to use:** When the access token expires or is about to expire.
 
-**Requisição:**
+**Request:**
+
 ```http
 POST /auth/refresh
 Headers:
-  Authorization: Bearer <access-token-atual>
-  x-client-id: seu-client-id
-  Cookie: refreshToken=... (enviado automaticamente pelo navegador)
+  Authorization: Bearer <current-access-token>
+  x-client-id: your-client-id
+  x-client-secret: your-client-secret
+  Cookie: refreshToken=... (sent automatically by browser)
 ```
 
-**Resposta:**
+**Response:**
+
 ```json
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
-**⚠️ Importante:**
-- O refresh token está no cookie (gerenciado automaticamente pelo navegador)
-- Você só precisa enviar o access token atual no header `Authorization`
-- O refresh token **não é renovado**, ele continua válido por 3 dias
+**⚠️ Important:**
 
-**Você precisa fazer:**
-- Implementar refresh automático quando receber erro 401
-- Atualizar o access token salvo com o novo token recebido
-- Se o refresh falhar → redirecionar para tela de login
+- The refresh token is in the cookie (managed automatically by the browser)
+- You only need to send the current access token in the `Authorization` header
+- The refresh token **is not renewed**, it remains valid for 3 days
 
-**Exemplo de lógica:**
+**What you need to do:**
+
+- Implement automatic refresh when receiving 401 error
+- Update the saved access token with the new token received
+- If refresh fails → redirect to login screen
+
+**Logic example:**
+
 ```typescript
-// Pseudocódigo
+// Pseudocode
 try {
-  const response = await fetch('/sua-api/protected', {
-    headers: { 'Authorization': `Bearer ${accessToken}` }
+  const response = await fetch('/your-api/protected', {
+    headers: { Authorization: `Bearer ${accessToken}` },
   });
-  
+
   if (response.status === 401) {
-    // Token expirado, tentar refresh
+    // Token expired, try refresh
     const newToken = await refreshToken(accessToken);
-    // Tentar novamente com novo token
-    return fetch('/sua-api/protected', {
-      headers: { 'Authorization': `Bearer ${newToken}` }
+    // Try again with new token
+    return fetch('/your-api/protected', {
+      headers: { Authorization: `Bearer ${newToken}` },
     });
   }
 } catch (error) {
-  // Refresh falhou, redirecionar para login
+  // Refresh failed, redirect to login
   redirectToLogin();
 }
 ```
 
 ---
 
-### Passo 5: Logout
+### Step 5: Logout
 
-**Quando usar:** Quando o usuário quer sair da aplicação.
+**When to use:** When the user wants to exit the application.
 
-**Requisição:**
+**Request:**
+
 ```http
 POST /auth/logout
 Headers:
   Authorization: Bearer <access-token>
-  x-client-id: seu-client-id
+  x-client-id: your-client-id
+  x-client-secret: your-client-secret
 ```
 
-**Resposta:**
+**Response:**
+
 ```json
 {
   "message": "Logout realizado com sucesso"
 }
 ```
 
-**O que acontece:**
-- O refresh token é removido do banco de dados
-- O access token atual continua válido até expirar (mas não pode ser renovado)
-- Próxima tentativa de refresh falhará
+**What happens:**
 
-**Você precisa fazer:**
-- Remover o access token do armazenamento local
-- Limpar qualquer estado de autenticação na sua aplicação
-- Redirecionar para tela de login
+- The refresh token is removed from the database
+- The current access token remains valid until it expires (but cannot be renewed)
+- Next refresh attempt will fail
+
+**What you need to do:**
+
+- Remove the access token from local storage
+- Clear any authentication state in your application
+- Redirect to login screen
 
 ---
 
-## 🔑 Entendendo os Tokens
+## 🔑 Understanding Tokens
 
 ### Access Token
 
-**O que é:** JWT que prova que o usuário está autenticado
+**What it is:** JWT that proves the user is authenticated
 
-**Onde usar:** Em todas as requisições autenticadas
+**Where to use:** In all authenticated requests
 
-**Como enviar:**
+**How to send:**
+
 ```http
 Authorization: Bearer <access-token>
 ```
 
-**Validade:** 30 minutos
+**Validity:** 30 minutes
 
-**Estrutura (decodificado):**
+**Structure (decoded):**
+
 ```json
 {
   "sub": "user-id",
   "email": "user@example.com",
-  "aud": "seu-client-id",
+  "aud": "your-client-id",
   "iat": 1234567890,
   "exp": 1234570000
 }
 ```
 
-**⚠️ Importante:** O campo `aud` contém seu `clientId`. Microsserviços devem validar que `aud === seu-client-id`.
+**⚠️ Important:** The `aud` field contains your `clientId`. Microservices must validate that `aud === your-client-id`.
 
 ### Refresh Token
 
-**O que é:** Token usado para renovar o access token
+**What it is:** Token used to renew the access token
 
-**Onde está:** Cookie HTTP-only (gerenciado automaticamente)
+**Where it is:** HTTP-only cookie (managed automatically)
 
-**Você precisa fazer:** Nada! O navegador gerencia automaticamente.
+**What you need to do:** Nothing! The browser manages it automatically.
 
-**Validade:** 3 dias
+**Validity:** 3 days
 
-**Quando usar:** Automaticamente quando o access token expira
+**When to use:** Automatically when the access token expires
 
 ---
 
-## 🎯 Casos de Uso Comuns
+## 🎯 Common Use Cases
 
-### Caso 1: Aplicação Web Frontend
+### Case 1: Web Frontend Application
 
-**O que você precisa:**
+**What you need:**
+
 - JavaScript/TypeScript
-- Capacidade de fazer requisições HTTP (fetch/axios)
-- Suporte a cookies (navegador moderno)
+- Ability to make HTTP requests (fetch/axios)
+- Cookie support (modern browser)
 
-**Fluxo:**
-1. Usuário preenche formulário de signup → `POST /auth/signup`
-2. Usuário faz login → `POST /auth/login` → salvar `accessToken`
-3. Em cada requisição autenticada → adicionar `Authorization: Bearer <token>`
-4. Quando token expira → `POST /auth/refresh` → atualizar token
-5. Usuário faz logout → `POST /auth/logout` → limpar token local
+**Flow:**
 
-**Exemplo mínimo:**
+1. User fills signup form → `POST /auth/signup`
+2. User logs in → `POST /auth/login` → save `accessToken`
+3. In each authenticated request → add `Authorization: Bearer <token>`
+4. When token expires → `POST /auth/refresh` → update token
+5. User logs out → `POST /auth/logout` → clear local token
+
+**Minimal example:**
+
 ```typescript
+// ⚠️ WARNING: This example exposes clientSecret in frontend!
+// In production, use a backend proxy to protect clientSecret
+const CLIENT_ID = 'your-client-id';
+const CLIENT_SECRET = 'your-client-secret'; // ⚠️ NEVER expose in frontend!
+
 // Login
 const login = async (email: string, password: string) => {
   const res = await fetch('https://auth.example.com/auth/login', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-client-id': 'seu-client-id'
+      'x-client-id': CLIENT_ID,
+      'x-client-secret': CLIENT_SECRET, // ⚠️ Use backend proxy in production!
     },
-    credentials: 'include', // Importante para cookies
-    body: JSON.stringify({ email, password })
+    credentials: 'include', // Important for cookies
+    body: JSON.stringify({ email, password }),
   });
-  
+
   const { accessToken } = await res.json();
   localStorage.setItem('accessToken', accessToken);
 };
 
-// Requisição autenticada
+// Authenticated request
 const fetchProtected = async () => {
   const token = localStorage.getItem('accessToken');
-  
+
   const res = await fetch('https://api.example.com/protected', {
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'x-client-id': 'seu-client-id'
+      Authorization: `Bearer ${token}`,
+      'x-client-id': CLIENT_ID,
+      'x-client-secret': CLIENT_SECRET, // ⚠️ Use backend proxy in production!
     },
-    credentials: 'include'
+    credentials: 'include',
   });
-  
+
   if (res.status === 401) {
-    // Token expirado, fazer refresh
+    // Token expired, refresh
     await refreshToken();
-    // Tentar novamente...
+    // Try again...
   }
-  
+
   return res.json();
 };
 ```
 
-### Caso 2: Microsserviço Backend
+### Case 2: Backend Microservice
 
-**O que você precisa:**
-- Biblioteca JWT (ex: `jsonwebtoken` para Node.js)
-- O `ACCESS_TOKEN_SECRET` (fornecido pela equipe)
-- Seu `clientId` para validação
+**What you need:**
 
-**Fluxo:**
-1. Receber requisição com `Authorization: Bearer <token>`
-2. Validar assinatura do JWT usando `ACCESS_TOKEN_SECRET`
-3. Verificar expiração (`exp`)
-4. **Validar `aud` === seu `clientId`** (CRÍTICO!)
-5. Extrair `sub` (user ID) e usar na lógica
+- JWT library (e.g., `jsonwebtoken` for Node.js)
+- The `ACCESS_TOKEN_SECRET` (provided by the team)
+- Your `clientId` for validation
 
-**Exemplo mínimo (Node.js/NestJS):**
+**Flow:**
+
+1. Receive request with `Authorization: Bearer <token>`
+2. Validate JWT signature using `ACCESS_TOKEN_SECRET`
+3. Check expiration (`exp`)
+4. **Validate `aud` === your `clientId`** (CRITICAL!)
+5. Extract `sub` (user ID) and use in logic
+
+**Minimal example (Node.js/NestJS):**
+
 ```typescript
 import { JwtService } from '@nestjs/jwt';
 
-// Validar token
+// Validate token
 const payload = await jwtService.verifyAsync(token, {
-  secret: process.env.ACCESS_TOKEN_SECRET
+  secret: process.env.ACCESS_TOKEN_SECRET,
 });
 
-// Validar audience (CRÍTICO!)
+// Validate audience (CRITICAL!)
 if (payload.aud !== process.env.MY_CLIENT_ID) {
   throw new UnauthorizedException('Invalid token audience');
 }
 
-// Usar user ID
+// Use user ID
 const userId = payload.sub;
 ```
 
-### Caso 3: Aplicação Mobile
+### Case 3: Mobile Application
 
-**O que você precisa:**
-- Cliente HTTP (ex: axios, fetch)
-- Gerenciador de cookies ou armazenamento local
+**What you need:**
 
-**Diferenças:**
-- Cookies podem não funcionar automaticamente
-- Você pode precisar gerenciar o refresh token manualmente
-- Considere usar Secure Storage para tokens
+- HTTP client (e.g., axios, fetch)
+- Cookie manager or local storage
 
-**Fluxo similar ao frontend web, mas:**
-- Salvar refresh token manualmente (se não houver suporte a cookies)
-- Enviar refresh token no body ou header customizado (se necessário)
+**Differences:**
 
----
+- Cookies may not work automatically
+- You may need to manage the refresh token manually
+- Consider using Secure Storage for tokens
 
-## ⚠️ O que você NÃO precisa fazer
+**Flow similar to web frontend, but:**
 
-### ❌ Não precisa:
-
-1. **Gerenciar refresh tokens manualmente** - Vem como cookie HTTP-only
-2. **Validar senhas no seu lado** - O Identity Service faz isso
-3. **Hash de senhas** - O Identity Service gerencia
-4. **Criar tabelas de usuários** - Tudo é gerenciado pelo Identity Service
-5. **Gerenciar sessões** - Tokens são stateless
-6. **Implementar OAuth do zero** - O Identity Service já faz login com Google
-7. **Preocupar-se com múltiplos usuários** - O Identity Service gerencia isolamento
-
-### ✅ Você só precisa:
-
-1. **Enviar requisições HTTP** com os headers corretos
-2. **Salvar o access token** e usá-lo nas requisições
-3. **Fazer refresh** quando o token expirar
-4. **Validar o `aud`** se você for um microsserviço backend
+- Save refresh token manually (if no cookie support)
+- Send refresh token in body or custom header (if necessary)
 
 ---
 
-## 🔒 Segurança - O que você DEVE fazer
+## ⚠️ What You DON'T Need to Do
 
-### ✅ Obrigatório:
+### ❌ Don't need:
 
-1. **Sempre validar `aud` em microsserviços**
+1. **Manage refresh tokens manually** - Comes as HTTP-only cookie
+2. **Validate passwords on your side** - Identity Service does this
+3. **Hash passwords** - Identity Service manages this
+4. **Create user tables** - Everything is managed by Identity Service
+5. **Manage sessions** - Tokens are stateless
+6. **Implement OAuth from scratch** - Identity Service already handles Google login
+7. **Worry about multiple users** - Identity Service manages isolation
+
+### ✅ You only need:
+
+1. **Send HTTP requests** with correct headers
+2. **Save the access token** and use it in requests
+3. **Refresh** when the token expires
+4. **Validate `aud`** if you are a backend microservice
+
+---
+
+## 🔒 Security - What You MUST Do
+
+### ✅ Mandatory:
+
+1. **Always validate `aud` in microservices**
+
    ```typescript
    if (payload.aud !== myClientId) {
      throw new UnauthorizedException();
    }
    ```
 
-2. **Usar HTTPS em produção**
-   - Tokens e cookies devem trafegar apenas por HTTPS
+2. **Use HTTPS in production**
+   - Tokens and cookies must only travel over HTTPS
 
-3. **Não expor `clientSecret` no frontend**
-   - `clientSecret` é apenas para validação server-side (se necessário)
+3. **Protect the `clientSecret`**
+   - The `clientSecret` must be sent in the `x-client-secret` header in all requests
+   - **Never expose the `clientSecret`** in the frontend or in public client code
+   - For frontend applications, use a backend proxy to protect the `clientSecret`
+   - Store the `clientSecret` in secure environment variables
 
-4. **Implementar refresh automático**
-   - Não deixe o usuário ver erros de token expirado
+4. **Implement automatic refresh**
+   - Don't let the user see token expired errors
 
-### ⚠️ Recomendado:
+### ⚠️ Recommended:
 
-1. **Não armazenar tokens em localStorage** (se possível)
-   - Prefira httpOnly cookies (mas isso requer backend proxy)
+1. **Don't store tokens in localStorage** (if possible)
+   - Prefer httpOnly cookies (but this requires backend proxy)
 
-2. **Implementar timeout de sessão**
-   - Após X minutos de inatividade, fazer logout
+2. **Implement session timeout**
+   - After X minutes of inactivity, logout
 
-3. **Validar `x-client-id` header**
-   - Em microsserviços, sempre verificar que o header corresponde ao `aud`
-
----
-
-## 📊 Resumo de Requisições
-
-### Tabela de Endpoints
-
-| Endpoint | Método | Auth Necessária? | Cookie Necessário? |
-|----------|--------|------------------|-------------------|
-| `/auth/signup` | POST | ❌ Não | ❌ Não |
-| `/auth/login` | POST | ❌ Não | ❌ Não (recebe) |
-| `/auth/login/google` | POST | ❌ Não | ❌ Não (recebe) |
-| `/auth/refresh` | POST | ✅ Sim (access token) | ✅ Sim (refresh token) |
-| `/auth/logout` | POST | ✅ Sim (access token) | ❌ Não |
-
-### Headers Obrigatórios
-
-| Header | Quando Usar | Obrigatório? |
-|--------|-------------|--------------|
-| `x-client-id` | Todas as requisições | ✅ Sim |
-| `Content-Type: application/json` | POST com body | ✅ Sim |
-| `Authorization: Bearer <token>` | Endpoints protegidos | ✅ Sim |
+3. **Validate `x-client-id` header**
+   - In microservices, always verify that the header matches `aud`
 
 ---
 
-## 🐛 Tratamento de Erros Comuns
+## 📊 Request Summary
+
+### Endpoints Table
+
+| Endpoint             | Method | Auth Required?        | Cookie Required?       |
+| -------------------- | ------ | --------------------- | ---------------------- |
+| `/auth/signup`       | POST   | ❌ No                 | ❌ No                  |
+| `/auth/login`        | POST   | ❌ No                 | ❌ No (receives)       |
+| `/auth/login/google` | POST   | ❌ No                 | ❌ No (receives)       |
+| `/auth/refresh`      | POST   | ✅ Yes (access token) | ✅ Yes (refresh token) |
+| `/auth/logout`       | POST   | ✅ Yes (access token) | ❌ No                  |
+
+### Required Headers
+
+| Header                           | When to Use         | Required? |
+| -------------------------------- | ------------------- | --------- |
+| `x-client-id`                    | All requests        | ✅ Yes    |
+| `x-client-secret`                | All requests        | ✅ Yes    |
+| `Content-Type: application/json` | POST with body      | ✅ Yes    |
+| `Authorization: Bearer <token>`  | Protected endpoints | ✅ Yes    |
+
+**⚠️ Important:** The `x-client-secret` is required in all requests. Never expose the `clientSecret` in the frontend - use a backend proxy for frontend applications.
+
+---
+
+## 🐛 Common Error Handling
 
 ### 401 Unauthorized
 
-**Possíveis causas:**
-- Token expirado → Fazer refresh
-- Token inválido → Redirecionar para login
-- `x-client-id` ausente ou inválido → Verificar header
-- Credenciais inválidas (login) → Mostrar erro ao usuário
+**Possible causes:**
 
-**Ação:**
+- Token expired → Refresh
+- Invalid token → Redirect to login
+- `x-client-id` missing or invalid → Check header
+- Invalid credentials (login) → Show error to user
+
+**Action:**
+
 ```typescript
 if (error.status === 401) {
-  // Tentar refresh se tiver refresh token
+  // Try refresh if have refresh token
   try {
     const newToken = await refreshToken();
     // Retry request
   } catch {
-    // Refresh falhou, fazer logout
+    // Refresh failed, logout
     redirectToLogin();
   }
 }
@@ -493,48 +556,49 @@ if (error.status === 401) {
 
 ### 403 Forbidden
 
-**Possíveis causas:**
-- Usuário bloqueado na aplicação
-- Application inativa
+**Possible causes:**
 
-**Ação:** Redirecionar para login e mostrar mensagem apropriada
+- User blocked in application
+- Application inactive
+
+**Action:** Redirect to login and show appropriate message
 
 ### 409 Conflict
 
-**Possíveis causas:**
-- Tentativa de signup com email já existente na aplicação
+**Possible causes:**
 
-**Ação:** Sugerir fazer login ao invés de signup
+- Signup attempt with email already existing in application
 
----
-
-## 📞 Próximos Passos
-
-1. **Obter seu `clientId`** - Entre em contato com a equipe
-2. **Configurar variáveis de ambiente** - URL da API e `clientId`
-3. **Implementar fluxo de autenticação** - Signup → Login → Refresh → Logout
-4. **Testar integração** - Use o Swagger UI em desenvolvimento (`/api`)
-5. **Implementar tratamento de erros** - 401, 403, 409
+**Action:** Suggest login instead of signup
 
 ---
 
-## 💡 Dicas Finais
+## 📞 Next Steps
 
-- **Desenvolvimento:** Use o Swagger UI (`/api`) para testar endpoints
-- **Produção:** Sempre use HTTPS
-- **Tokens:** Access tokens são curtos (30min) por segurança
-- **Refresh:** Implemente refresh proativo (5min antes de expirar)
-- **Logs:** Não logue tokens completos em produção
-
----
-
-## 📚 Recursos Adicionais
-
-- **Documentação completa:** Veja `README.md` para detalhes técnicos
-- **Swagger UI:** Disponível em `/api` quando `NODE_ENV=development`
-- **Suporte:** Entre em contato com a equipe para dúvidas
+1. **Get your `clientId`** - Contact the team
+2. **Configure environment variables** - API URL and `clientId`
+3. **Implement authentication flow** - Signup → Login → Refresh → Logout
+4. **Test integration** - Use Swagger UI in development (`/api`)
+5. **Implement error handling** - 401, 403, 409
 
 ---
 
-**Última atualização:** Janeiro 2024
+## 💡 Final Tips
 
+- **Development:** Use Swagger UI (`/api`) to test endpoints
+- **Production:** Always use HTTPS
+- **Tokens:** Access tokens are short (30min) for security
+- **Refresh:** Implement proactive refresh (5min before expiring)
+- **Logs:** Don't log complete tokens in production
+
+---
+
+## 📚 Additional Resources
+
+- **Complete documentation:** See `README.md` for technical details
+- **Swagger UI:** Available at `/api` when `NODE_ENV=development`
+- **Support:** Contact the team for questions
+
+---
+
+**Last updated:** January 2024
