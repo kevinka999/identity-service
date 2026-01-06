@@ -4,6 +4,8 @@ import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
 import cookieParser from 'cookie-parser';
+import { AllExceptionsFilter } from './infrastructure/common/exception.filter';
+import { LoggingInterceptor } from './infrastructure/common/logging.interceptor';
 
 async function setupSwagger(app: INestApplication) {
   if (process.env.NODE_ENV !== 'development') return;
@@ -52,6 +54,14 @@ async function bootstrap() {
 
   app.use(cookieParser());
   app.useGlobalPipes(new ZodValidationPipe());
+  app.useGlobalFilters(new AllExceptionsFilter());
+  app.useGlobalInterceptors(new LoggingInterceptor());
+  app.enableCors({
+    origin: /^http:\/\/localhost(:\d+)?$/,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+  });
+
   await app.listen(process.env.PORT ?? 3005);
 }
 bootstrap();
