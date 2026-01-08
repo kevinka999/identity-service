@@ -15,10 +15,13 @@ export interface JwtPayload {
 @Injectable()
 export class AccessTokenStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(private readonly configService: ConfigService) {
-    const publicKey = configService.get<string>('JWT_ACCESS_TOKEN_PUBLIC_KEY');
+    const rawPublicKey =
+      configService.get<string>('JWT_ACCESS_TOKEN_PUBLIC_KEY') || '';
+    const publicKey = rawPublicKey.replace(/^"|"$/g, '').replace(/\\n/g, '\n');
     if (!publicKey) {
       throw new Error('JWT_ACCESS_TOKEN_PUBLIC_KEY is required');
     }
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       secretOrKey: publicKey.replace(/\\n/g, '\n'),

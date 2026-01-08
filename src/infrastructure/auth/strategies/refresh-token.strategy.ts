@@ -11,10 +11,13 @@ export class RefreshTokenStrategy extends PassportStrategy(
   'jwt-refresh',
 ) {
   constructor(private readonly configService: ConfigService) {
-    const publicKey = configService.get<string>('JWT_REFRESH_TOKEN_PUBLIC_KEY');
+    const rawPublicKey =
+      configService.get<string>('JWT_REFRESH_TOKEN_PUBLIC_KEY') || '';
+    const publicKey = rawPublicKey.replace(/^"|"$/g, '').replace(/\\n/g, '\n');
     if (!publicKey) {
       throw new Error('JWT_REFRESH_TOKEN_PUBLIC_KEY is required');
     }
+
     super({
       jwtFromRequest: (req: Request) => {
         return req.cookies?.refreshToken;
